@@ -1,6 +1,6 @@
 --[[
     VividLibrary
-    A modern, resizable UI library for Roblox exploits
+    A modern, collapsible sidebar UI library for Roblox exploits
     Version: 1.0.0
 ]]
 
@@ -8,6 +8,21 @@ local VividLibrary = {}
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
+
+-- Constants
+local SIDEBAR_DEFAULT_WIDTH = 250
+local SIDEBAR_MIN_WIDTH = 200
+local SIDEBAR_MAX_WIDTH = 400
+local TWEEN_INFO = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local COLORS = {
+    Background = Color3.fromRGB(25, 25, 25),
+    Sidebar = Color3.fromRGB(30, 30, 30),
+    TopBar = Color3.fromRGB(35, 35, 35),
+    Text = Color3.fromRGB(255, 255, 255),
+    TextDim = Color3.fromRGB(175, 175, 175),
+    AccentPrimary = Color3.fromRGB(65, 65, 65),
+    AccentSecondary = Color3.fromRGB(45, 45, 45)
+}
 
 -- Constants
 local SIDEBAR_DEFAULT_WIDTH = 200
@@ -19,11 +34,12 @@ local TWEEN_SPEED = 0.15
 function VividLibrary.new(title)
     local gui = {}
     
-    -- Create ScreenGui
+    -- Create base ScreenGui
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "VividLibrary"
     ScreenGui.ResetOnSpawn = false
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.IgnoreGuiInset = true
     
     -- Try to parent to CoreGui, fallback to PlayerGui
     local success, _ = pcall(function()
@@ -33,14 +49,27 @@ function VividLibrary.new(title)
         ScreenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
     end
     
-    -- Main Frame
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Name = "MainFrame"
-    MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Position = UDim2.new(0, 20, 0, 20)
-    MainFrame.Size = UDim2.new(0, SIDEBAR_DEFAULT_WIDTH, 0, 400)
-    MainFrame.Parent = ScreenGui
+    -- Background Frame (covers entire screen)
+    local BackgroundFrame = Instance.new("Frame")
+    BackgroundFrame.Name = "BackgroundFrame"
+    BackgroundFrame.BackgroundColor3 = COLORS.Background
+    BackgroundFrame.BorderSizePixel = 0
+    BackgroundFrame.Size = UDim2.new(1, 0, 1, 0)
+    BackgroundFrame.Parent = ScreenGui
+
+    -- Sidebar Frame
+    local SidebarFrame = Instance.new("Frame")
+    SidebarFrame.Name = "SidebarFrame"
+    SidebarFrame.BackgroundColor3 = COLORS.Sidebar
+    SidebarFrame.BorderSizePixel = 0
+    SidebarFrame.Position = UDim2.new(0, 0, 0, 0)
+    SidebarFrame.Size = UDim2.new(0, SIDEBAR_DEFAULT_WIDTH, 1, 0)
+    SidebarFrame.Parent = BackgroundFrame
+
+    -- Add blur effect to background
+    local BlurEffect = Instance.new("BlurEffect")
+    BlurEffect.Size = 10
+    BlurEffect.Parent = game:GetService("Lighting")
     
     -- Add shadow
     local Shadow = Instance.new("ImageLabel")
@@ -54,13 +83,26 @@ function VividLibrary.new(title)
     Shadow.SliceCenter = Rect.new(23, 23, 277, 277)
     Shadow.Parent = MainFrame
     
-    -- Title bar
-    local TitleBar = Instance.new("Frame")
-    TitleBar.Name = "TitleBar"
-    TitleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    TitleBar.BorderSizePixel = 0
-    TitleBar.Size = UDim2.new(1, 0, 0, 30)
-    TitleBar.Parent = MainFrame
+    -- Sidebar Header
+    local SidebarHeader = Instance.new("Frame")
+    SidebarHeader.Name = "SidebarHeader"
+    SidebarHeader.BackgroundColor3 = COLORS.TopBar
+    SidebarHeader.BorderSizePixel = 0
+    SidebarHeader.Size = UDim2.new(1, 0, 0, 50)
+    SidebarHeader.Parent = SidebarFrame
+
+    -- Pages Label
+    local PagesLabel = Instance.new("TextLabel")
+    PagesLabel.Name = "PagesLabel"
+    PagesLabel.BackgroundTransparency = 1
+    PagesLabel.Position = UDim2.new(0, 15, 0, 0)
+    PagesLabel.Size = UDim2.new(1, -30, 1, 0)
+    PagesLabel.Font = Enum.Font.GothamMedium
+    PagesLabel.Text = "Pages"
+    PagesLabel.TextColor3 = COLORS.TextDim
+    PagesLabel.TextSize = 14
+    PagesLabel.TextXAlignment = Enum.TextXAlignment.Left
+    PagesLabel.Parent = SidebarHeader
     
     local TitleText = Instance.new("TextLabel")
     TitleText.Name = "Title"
@@ -77,18 +119,36 @@ function VividLibrary.new(title)
     -- Tab Container
     local TabContainer = Instance.new("ScrollingFrame")
     TabContainer.Name = "TabContainer"
-    TabContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    TabContainer.BackgroundTransparency = 1
     TabContainer.BorderSizePixel = 0
-    TabContainer.Position = UDim2.new(0, 0, 0, 30)
-    TabContainer.Size = UDim2.new(1, 0, 1, -30)
+    TabContainer.Position = UDim2.new(0, 0, 0, 50)
+    TabContainer.Size = UDim2.new(1, 0, 1, -50)
     TabContainer.ScrollBarThickness = 2
-    TabContainer.ScrollBarImageColor3 = Color3.fromRGB(70, 70, 70)
-    TabContainer.Parent = MainFrame
+    TabContainer.ScrollBarImageColor3 = COLORS.AccentPrimary
+    TabContainer.Parent = SidebarFrame
+
+    -- Content Frame (right side)
+    local ContentFrame = Instance.new("Frame")
+    ContentFrame.Name = "ContentFrame"
+    ContentFrame.BackgroundTransparency = 1
+    ContentFrame.BorderSizePixel = 0
+    ContentFrame.Position = UDim2.new(0, SIDEBAR_DEFAULT_WIDTH, 0, 0)
+    ContentFrame.Size = UDim2.new(1, -SIDEBAR_DEFAULT_WIDTH, 1, 0)
+    ContentFrame.Parent = BackgroundFrame
     
     -- Add UIListLayout for tabs
     local TabList = Instance.new("UIListLayout")
-    TabList.Padding = UDim.new(0, 2)
+    TabList.Padding = UDim.new(0, 4)
+    TabList.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    TabList.SortOrder = Enum.SortOrder.LayoutOrder
     TabList.Parent = TabContainer
+
+    -- Add UIPadding for tabs
+    local TabPadding = Instance.new("UIPadding")
+    TabPadding.PaddingLeft = UDim.new(0, 15)
+    TabPadding.PaddingRight = UDim.new(0, 15)
+    TabPadding.PaddingTop = UDim.new(0, 8)
+    TabPadding.Parent = TabContainer
     
     -- Resizing functionality
     local Resizer = Instance.new("Frame")
@@ -161,14 +221,34 @@ function VividLibrary.new(title)
         
         local TabButton = Instance.new("TextButton")
         TabButton.Name = name
-        TabButton.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        TabButton.BackgroundColor3 = COLORS.AccentSecondary
+        TabButton.BackgroundTransparency = 1
         TabButton.BorderSizePixel = 0
-        TabButton.Size = UDim2.new(1, 0, 0, 35)
-        TabButton.Font = Enum.Font.Gotham
+        TabButton.Size = UDim2.new(1, 0, 0, 32)
+        TabButton.Font = Enum.Font.GothamMedium
         TabButton.Text = name
-        TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TabButton.TextColor3 = COLORS.TextDim
         TabButton.TextSize = 14
+        TabButton.TextXAlignment = Enum.TextXAlignment.Left
+        TabButton.AutoButtonColor = false
         TabButton.Parent = TabContainer
+
+        -- Add hover effect
+        TabButton.MouseEnter:Connect(function()
+            TweenService:Create(TabButton, TWEEN_INFO, {
+                BackgroundTransparency = 0,
+                TextColor3 = COLORS.Text
+            }):Play()
+        end)
+
+        TabButton.MouseLeave:Connect(function()
+            if not TabButton.Selected then
+                TweenService:Create(TabButton, TWEEN_INFO, {
+                    BackgroundTransparency = 1,
+                    TextColor3 = COLORS.TextDim
+                }):Play()
+            end
+        end)
         
         -- Content frame for this tab
         local ContentFrame = Instance.new("Frame")
