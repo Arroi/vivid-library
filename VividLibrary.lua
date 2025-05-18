@@ -153,40 +153,42 @@ function VividLibrary.new(title)
     -- Resizing functionality
     local Resizer = Instance.new("Frame")
     Resizer.Name = "Resizer"
-    Resizer.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    Resizer.BackgroundColor3 = COLORS.AccentPrimary
     Resizer.BorderSizePixel = 0
     Resizer.Position = UDim2.new(1, -2, 0, 0)
     Resizer.Size = UDim2.new(0, 2, 1, 0)
-    Resizer.Parent = MainFrame
+    Resizer.Parent = SidebarFrame
     
-    -- Dragging functionality
-    local dragging = false
-    local dragStart = nil
-    local startPos = nil
+    -- Resizing logic
+    local resizing = false
+    local startX = nil
+    local startWidth = nil
     
-    TitleBar.InputBegan:Connect(function(input)
+    Resizer.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = MainFrame.Position
+            resizing = true
+            startX = input.Position.X
+            startWidth = SidebarFrame.Size.X.Offset
         end
     end)
     
     UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            MainFrame.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
+        if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position.X - startX
+            local newWidth = math.clamp(startWidth + delta, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH)
+            
+            -- Update sidebar width
+            SidebarFrame.Size = UDim2.new(0, newWidth, 1, 0)
+            
+            -- Update content frame position
+            ContentFrame.Position = UDim2.new(0, newWidth, 0, 0)
+            ContentFrame.Size = UDim2.new(1, -newWidth, 1, 0)
         end
     end)
     
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
+            resizing = false
         end
     end)
     
