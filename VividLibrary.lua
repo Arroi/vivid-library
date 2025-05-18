@@ -1,6 +1,5 @@
 --[[
     VividLibrary
-    A modern, collapsible sidebar UI library for Roblox exploits
     Version: 1.0.0
 ]]
 
