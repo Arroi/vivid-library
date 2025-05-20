@@ -25,7 +25,6 @@ function Library.new(name)
     local window = {}
     local tabs = {}
     local activeTab = nil
-    local gui = {}
     
     -- Create ScreenGui
     local ScreenGui = Instance.new("ScreenGui")
@@ -142,6 +141,62 @@ function Library.new(name)
     
     function window:AddTab(name)
         local tab = {}
+        tab.AddButton = function(_, text, callback)
+            local Button = Instance.new("TextButton")
+            Button.Name = text
+            Button.BackgroundColor3 = COLORS.DarkContrast
+            Button.BorderSizePixel = 0
+            Button.Size = UDim2.new(1, 0, 0, 32)
+            Button.Font = Enum.Font.Gotham
+            Button.Text = text
+            Button.TextColor3 = COLORS.TextColor
+            Button.TextSize = 13
+            Button.Parent = TabContent
+            
+            Button.MouseButton1Click:Connect(callback or function() end)
+            return Button
+        end
+        
+        tab.AddToggle = function(_, text, default, callback)
+            local Toggle = Instance.new("Frame")
+            Toggle.Name = text
+            Toggle.BackgroundColor3 = COLORS.DarkContrast
+            Toggle.BorderSizePixel = 0
+            Toggle.Size = UDim2.new(1, 0, 0, 32)
+            Toggle.Parent = TabContent
+            
+            local Label = Instance.new("TextLabel")
+            Label.BackgroundTransparency = 1
+            Label.Position = UDim2.new(0, 8, 0, 0)
+            Label.Size = UDim2.new(1, -46, 1, 0)
+            Label.Font = Enum.Font.Gotham
+            Label.Text = text
+            Label.TextColor3 = COLORS.TextColor
+            Label.TextSize = 13
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.Parent = Toggle
+            
+            local Switch = Instance.new("Frame")
+            Switch.Name = "Switch"
+            Switch.AnchorPoint = Vector2.new(1, 0.5)
+            Switch.BackgroundColor3 = default and Color3.fromRGB(0, 255, 128) or Color3.fromRGB(255, 64, 64)
+            Switch.BorderSizePixel = 0
+            Switch.Position = UDim2.new(1, -8, 0.5, 0)
+            Switch.Size = UDim2.new(0, 30, 0, 16)
+            Switch.Parent = Toggle
+            
+            local value = default or false
+            
+            Toggle.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    value = not value
+                    Switch.BackgroundColor3 = value and Color3.fromRGB(0, 255, 128) or Color3.fromRGB(255, 64, 64)
+                    if callback then callback(value) end
+                end
+            end)
+            
+            return Toggle
+        end
         
         -- Tab Button
         local TabButton = Instance.new("TextButton")
@@ -286,7 +341,10 @@ function Library.new(name)
         return tab
     end
     
-    return window
+    -- Return the window object with its methods
+    return setmetatable(window, {
+        __index = window
+    })
 end
 
 return Library
