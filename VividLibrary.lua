@@ -1,302 +1,235 @@
 --[[
     VividLibrary
+    A modern UI library for Roblox exploits
     Version: 1.0.0
 ]]
 
-local VividLibrary = {}
+local Library = {}
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 
 -- Constants
-local SIDEBAR_DEFAULT_WIDTH = 250
-local SIDEBAR_MIN_WIDTH = 200
-local SIDEBAR_MAX_WIDTH = 400
-local TWEEN_INFO = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local COLORS = {
-    Background = Color3.fromRGB(25, 25, 25),
+    WindowBackground = Color3.fromRGB(24, 24, 24),
     Sidebar = Color3.fromRGB(30, 30, 30),
-    TopBar = Color3.fromRGB(35, 35, 35),
-    Text = Color3.fromRGB(255, 255, 255),
-    TextDim = Color3.fromRGB(175, 175, 175),
-    AccentPrimary = Color3.fromRGB(65, 65, 65),
-    AccentSecondary = Color3.fromRGB(45, 45, 45)
+    DarkContrast = Color3.fromRGB(20, 20, 20),
+    TextColor = Color3.fromRGB(255, 255, 255),
+    TextDimmed = Color3.fromRGB(175, 175, 175),
+    AccentColor = Color3.fromRGB(40, 40, 40)
 }
 
--- Constants
-local SIDEBAR_DEFAULT_WIDTH = 200
-local SIDEBAR_MIN_WIDTH = 150
-local SIDEBAR_MAX_WIDTH = 400
-local TWEEN_SPEED = 0.15
+local TWEEN_INFO = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
--- Create base GUI
-function VividLibrary.new(title)
+function Library.new(name)
     local gui = {}
+    local tabs = {}
+    local activeTab = nil
     
-    -- Create base ScreenGui
+    -- Create ScreenGui
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "VividLibrary"
     ScreenGui.ResetOnSpawn = false
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    ScreenGui.IgnoreGuiInset = true
     
-    -- Try to parent to CoreGui, fallback to PlayerGui
-    local success, _ = pcall(function()
+    -- Try to parent to CoreGui
+    pcall(function()
         ScreenGui.Parent = CoreGui
     end)
-    if not success then
+    if not ScreenGui.Parent then
         ScreenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
     end
     
-    -- Background Frame (covers entire screen)
-    local BackgroundFrame = Instance.new("Frame")
-    BackgroundFrame.Name = "BackgroundFrame"
-    BackgroundFrame.BackgroundColor3 = COLORS.Background
-    BackgroundFrame.BorderSizePixel = 0
-    BackgroundFrame.Size = UDim2.new(1, 0, 1, 0)
-    BackgroundFrame.Parent = ScreenGui
-
-    -- Sidebar Frame
-    local SidebarFrame = Instance.new("Frame")
-    SidebarFrame.Name = "SidebarFrame"
-    SidebarFrame.BackgroundColor3 = COLORS.Sidebar
-    SidebarFrame.BorderSizePixel = 0
-    SidebarFrame.Position = UDim2.new(0, 0, 0, 0)
-    SidebarFrame.Size = UDim2.new(0, SIDEBAR_DEFAULT_WIDTH, 1, 0)
-    SidebarFrame.Parent = BackgroundFrame
-
-    -- Add blur effect to background
-    local BlurEffect = Instance.new("BlurEffect")
-    BlurEffect.Size = 10
-    BlurEffect.Parent = game:GetService("Lighting")
+    -- Main window
+    local Window = Instance.new("Frame")
+    Window.Name = "Window"
+    Window.BackgroundColor3 = COLORS.WindowBackground
+    Window.BorderSizePixel = 1
+    Window.BorderColor3 = COLORS.AccentColor
+    Window.Position = UDim2.new(0.5, -300, 0.5, -200)
+    Window.Size = UDim2.new(0, 600, 0, 400)
+    Window.Parent = ScreenGui
     
-    -- Add shadow
-    local Shadow = Instance.new("ImageLabel")
-    Shadow.Name = "Shadow"
-    Shadow.BackgroundTransparency = 1
-    Shadow.Position = UDim2.new(0, -15, 0, -15)
-    Shadow.Size = UDim2.new(1, 30, 1, 30)
-    Shadow.Image = "rbxassetid://5554236805"
-    Shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-    Shadow.ScaleType = Enum.ScaleType.Slice
-    Shadow.SliceCenter = Rect.new(23, 23, 277, 277)
-    Shadow.Parent = MainFrame
+    -- Make window draggable
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
     
-    -- Sidebar Header
-    local SidebarHeader = Instance.new("Frame")
-    SidebarHeader.Name = "SidebarHeader"
-    SidebarHeader.BackgroundColor3 = COLORS.TopBar
-    SidebarHeader.BorderSizePixel = 0
-    SidebarHeader.Size = UDim2.new(1, 0, 0, 50)
-    SidebarHeader.Parent = SidebarFrame
-
+    Window.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = Window.Position
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            Window.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    
+    -- Sidebar
+    local Sidebar = Instance.new("Frame")
+    Sidebar.Name = "Sidebar"
+    Sidebar.BackgroundColor3 = COLORS.Sidebar
+    Sidebar.BorderSizePixel = 0
+    Sidebar.Size = UDim2.new(0, 150, 1, 0)
+    Sidebar.Parent = Window
+    
     -- Pages Label
     local PagesLabel = Instance.new("TextLabel")
     PagesLabel.Name = "PagesLabel"
     PagesLabel.BackgroundTransparency = 1
-    PagesLabel.Position = UDim2.new(0, 15, 0, 0)
-    PagesLabel.Size = UDim2.new(1, -30, 1, 0)
+    PagesLabel.Position = UDim2.new(0, 15, 0, 15)
+    PagesLabel.Size = UDim2.new(1, -30, 0, 20)
     PagesLabel.Font = Enum.Font.GothamMedium
     PagesLabel.Text = "Pages"
-    PagesLabel.TextColor3 = COLORS.TextDim
+    PagesLabel.TextColor3 = COLORS.TextDimmed
     PagesLabel.TextSize = 14
     PagesLabel.TextXAlignment = Enum.TextXAlignment.Left
-    PagesLabel.Parent = SidebarHeader
-    
-    local TitleText = Instance.new("TextLabel")
-    TitleText.Name = "Title"
-    TitleText.BackgroundTransparency = 1
-    TitleText.Position = UDim2.new(0, 10, 0, 0)
-    TitleText.Size = UDim2.new(1, -20, 1, 0)
-    TitleText.Font = Enum.Font.GothamBold
-    TitleText.Text = title or "Vivid Library"
-    TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TitleText.TextSize = 14
-    TitleText.TextXAlignment = Enum.TextXAlignment.Left
-    TitleText.Parent = TitleBar
+    PagesLabel.Parent = Sidebar
     
     -- Tab Container
-    local TabContainer = Instance.new("ScrollingFrame")
+    local TabContainer = Instance.new("Frame")
     TabContainer.Name = "TabContainer"
     TabContainer.BackgroundTransparency = 1
-    TabContainer.BorderSizePixel = 0
-    TabContainer.Position = UDim2.new(0, 0, 0, 50)
-    TabContainer.Size = UDim2.new(1, 0, 1, -50)
-    TabContainer.ScrollBarThickness = 2
-    TabContainer.ScrollBarImageColor3 = COLORS.AccentPrimary
-    TabContainer.Parent = SidebarFrame
-
-    -- Content Frame (right side)
-    local ContentFrame = Instance.new("Frame")
-    ContentFrame.Name = "ContentFrame"
-    ContentFrame.BackgroundTransparency = 1
-    ContentFrame.BorderSizePixel = 0
-    ContentFrame.Position = UDim2.new(0, SIDEBAR_DEFAULT_WIDTH, 0, 0)
-    ContentFrame.Size = UDim2.new(1, -SIDEBAR_DEFAULT_WIDTH, 1, 0)
-    ContentFrame.Parent = BackgroundFrame
+    TabContainer.Position = UDim2.new(0, 0, 0, 45)
+    TabContainer.Size = UDim2.new(1, 0, 1, -45)
+    TabContainer.Parent = Sidebar
     
-    -- Add UIListLayout for tabs
     local TabList = Instance.new("UIListLayout")
     TabList.Padding = UDim.new(0, 4)
     TabList.HorizontalAlignment = Enum.HorizontalAlignment.Left
     TabList.SortOrder = Enum.SortOrder.LayoutOrder
     TabList.Parent = TabContainer
-
-    -- Add UIPadding for tabs
+    
     local TabPadding = Instance.new("UIPadding")
     TabPadding.PaddingLeft = UDim.new(0, 15)
     TabPadding.PaddingRight = UDim.new(0, 15)
-    TabPadding.PaddingTop = UDim.new(0, 8)
     TabPadding.Parent = TabContainer
     
-    -- Resizing functionality
-    local Resizer = Instance.new("Frame")
-    Resizer.Name = "Resizer"
-    Resizer.BackgroundColor3 = COLORS.AccentPrimary
-    Resizer.BorderSizePixel = 0
-    Resizer.Position = UDim2.new(1, -2, 0, 0)
-    Resizer.Size = UDim2.new(0, 2, 1, 0)
-    Resizer.Parent = SidebarFrame
+    -- Content Area
+    local ContentArea = Instance.new("Frame")
+    ContentArea.Name = "ContentArea"
+    ContentArea.BackgroundColor3 = COLORS.WindowBackground
+    ContentArea.BorderSizePixel = 0
+    ContentArea.Position = UDim2.new(0, 150, 0, 0)
+    ContentArea.Size = UDim2.new(1, -150, 1, 0)
+    ContentArea.Parent = Window
     
-    -- Resizing logic
-    local resizing = false
-    local startX = nil
-    local startWidth = nil
+    -- Separator Line
+    local Separator = Instance.new("Frame")
+    Separator.Name = "Separator"
+    Separator.BackgroundColor3 = COLORS.AccentColor
+    Separator.BorderSizePixel = 0
+    Separator.Position = UDim2.new(0, 150, 0, 0)
+    Separator.Size = UDim2.new(0, 1, 1, 0)
+    Separator.Parent = Window
     
-    Resizer.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            resizing = true
-            startX = input.Position.X
-            startWidth = SidebarFrame.Size.X.Offset
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position.X - startX
-            local newWidth = math.clamp(startWidth + delta, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH)
-            
-            -- Update sidebar width
-            SidebarFrame.Size = UDim2.new(0, newWidth, 1, 0)
-            
-            -- Update content frame position
-            ContentFrame.Position = UDim2.new(0, newWidth, 0, 0)
-            ContentFrame.Size = UDim2.new(1, -newWidth, 1, 0)
-        end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            resizing = false
-        end
-    end)
-    
-    -- Resizing logic
-    local resizing = false
-    local originalWidth = SIDEBAR_DEFAULT_WIDTH
-    
-    Resizer.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            resizing = true
-            originalWidth = MainFrame.Size.X.Offset
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position.X - Resizer.AbsolutePosition.X
-            local newWidth = math.clamp(originalWidth + delta, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH)
-            MainFrame.Size = UDim2.new(0, newWidth, MainFrame.Size.Y.Scale, MainFrame.Size.Y.Offset)
-        end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            resizing = false
-        end
-    end)
-    
-    -- Tab creation function
     function gui:AddTab(name)
         local tab = {}
         
+        -- Tab Button
         local TabButton = Instance.new("TextButton")
         TabButton.Name = name
-        TabButton.BackgroundColor3 = COLORS.AccentSecondary
+        TabButton.BackgroundColor3 = COLORS.AccentColor
         TabButton.BackgroundTransparency = 1
-        TabButton.BorderSizePixel = 0
         TabButton.Size = UDim2.new(1, 0, 0, 32)
         TabButton.Font = Enum.Font.GothamMedium
         TabButton.Text = name
-        TabButton.TextColor3 = COLORS.TextDim
+        TabButton.TextColor3 = COLORS.TextDimmed
         TabButton.TextSize = 14
         TabButton.TextXAlignment = Enum.TextXAlignment.Left
         TabButton.AutoButtonColor = false
         TabButton.Parent = TabContainer
-
-        -- Add hover effect
-        TabButton.MouseEnter:Connect(function()
+        
+        -- Tab Content
+        local TabContent = Instance.new("ScrollingFrame")
+        TabContent.Name = name.."Content"
+        TabContent.BackgroundTransparency = 1
+        TabContent.BorderSizePixel = 0
+        TabContent.Position = UDim2.new(0, 0, 0, 0)
+        TabContent.Size = UDim2.new(1, 0, 1, 0)
+        TabContent.ScrollBarThickness = 2
+        TabContent.ScrollBarImageColor3 = COLORS.AccentColor
+        TabContent.Visible = false
+        TabContent.Parent = ContentArea
+        
+        local ContentList = Instance.new("UIListLayout")
+        ContentList.Padding = UDim.new(0, 6)
+        ContentList.Parent = TabContent
+        
+        local ContentPadding = Instance.new("UIPadding")
+        ContentPadding.PaddingLeft = UDim.new(0, 15)
+        ContentPadding.PaddingRight = UDim.new(0, 15)
+        ContentPadding.PaddingTop = UDim.new(0, 15)
+        ContentPadding.Parent = TabContent
+        
+        -- Tab Selection Logic
+        TabButton.MouseButton1Click:Connect(function()
+            if activeTab then
+                -- Deselect old tab
+                TweenService:Create(activeTab.button, TWEEN_INFO, {
+                    BackgroundTransparency = 1,
+                    TextColor3 = COLORS.TextDimmed
+                }):Play()
+                activeTab.content.Visible = false
+            end
+            
+            -- Select new tab
             TweenService:Create(TabButton, TWEEN_INFO, {
                 BackgroundTransparency = 0,
-                TextColor3 = COLORS.Text
+                TextColor3 = COLORS.TextColor
             }):Play()
+            TabContent.Visible = true
+            
+            activeTab = {button = TabButton, content = TabContent}
         end)
-
-        TabButton.MouseLeave:Connect(function()
-            if not TabButton.Selected then
+        
+        -- Hover Effects
+        TabButton.MouseEnter:Connect(function()
+            if TabButton ~= activeTab?.button then
                 TweenService:Create(TabButton, TWEEN_INFO, {
-                    BackgroundTransparency = 1,
-                    TextColor3 = COLORS.TextDim
+                    BackgroundTransparency = 0.8,
+                    TextColor3 = COLORS.TextColor
                 }):Play()
             end
         end)
         
-        -- Content frame for this tab
-        local ContentFrame = Instance.new("Frame")
-        ContentFrame.Name = name.."Content"
-        ContentFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-        ContentFrame.BorderSizePixel = 0
-        ContentFrame.Size = UDim2.new(1, 0, 1, 0)
-        ContentFrame.Visible = false
-        ContentFrame.Parent = TabContainer
-        
-        -- Add components container
-        local ComponentContainer = Instance.new("ScrollingFrame")
-        ComponentContainer.Name = "Components"
-        ComponentContainer.BackgroundTransparency = 1
-        ComponentContainer.Size = UDim2.new(1, -10, 1, 0)
-        ComponentContainer.Position = UDim2.new(0, 5, 0, 0)
-        ComponentContainer.ScrollBarThickness = 2
-        ComponentContainer.Parent = ContentFrame
-        
-        local ComponentList = Instance.new("UIListLayout")
-        ComponentList.Padding = UDim.new(0, 5)
-        ComponentList.Parent = ComponentContainer
-        
-        -- Tab button click handler
-        TabButton.MouseButton1Click:Connect(function()
-            -- Hide all content frames
-            for _, child in pairs(TabContainer:GetChildren()) do
-                if child:IsA("Frame") and child.Name:match("Content$") then
-                    child.Visible = false
-                end
+        TabButton.MouseLeave:Connect(function()
+            if TabButton ~= activeTab?.button then
+                TweenService:Create(TabButton, TWEEN_INFO, {
+                    BackgroundTransparency = 1,
+                    TextColor3 = COLORS.TextDimmed
+                }):Play()
             end
-            -- Show this tab's content
-            ContentFrame.Visible = true
         end)
         
-        -- Component creation functions
+        -- Component Creation Functions
         function tab:AddButton(text, callback)
             local Button = Instance.new("TextButton")
             Button.Name = text
-            Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            Button.BackgroundColor3 = COLORS.DarkContrast
             Button.BorderSizePixel = 0
-            Button.Size = UDim2.new(1, -10, 0, 30)
+            Button.Size = UDim2.new(1, 0, 0, 32)
             Button.Font = Enum.Font.Gotham
             Button.Text = text
-            Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-            Button.TextSize = 14
-            Button.Parent = ComponentContainer
+            Button.TextColor3 = COLORS.TextColor
+            Button.TextSize = 13
+            Button.Parent = TabContent
             
             Button.MouseButton1Click:Connect(callback or function() end)
             return Button
@@ -305,28 +238,29 @@ function VividLibrary.new(title)
         function tab:AddToggle(text, default, callback)
             local Toggle = Instance.new("Frame")
             Toggle.Name = text
-            Toggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            Toggle.BackgroundColor3 = COLORS.DarkContrast
             Toggle.BorderSizePixel = 0
-            Toggle.Size = UDim2.new(1, -10, 0, 30)
-            Toggle.Parent = ComponentContainer
+            Toggle.Size = UDim2.new(1, 0, 0, 32)
+            Toggle.Parent = TabContent
             
             local Label = Instance.new("TextLabel")
             Label.BackgroundTransparency = 1
-            Label.Position = UDim2.new(0, 10, 0, 0)
-            Label.Size = UDim2.new(1, -50, 1, 0)
+            Label.Position = UDim2.new(0, 8, 0, 0)
+            Label.Size = UDim2.new(1, -46, 1, 0)
             Label.Font = Enum.Font.Gotham
             Label.Text = text
-            Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-            Label.TextSize = 14
+            Label.TextColor3 = COLORS.TextColor
+            Label.TextSize = 13
             Label.TextXAlignment = Enum.TextXAlignment.Left
             Label.Parent = Toggle
             
             local Switch = Instance.new("Frame")
             Switch.Name = "Switch"
+            Switch.AnchorPoint = Vector2.new(1, 0.5)
             Switch.BackgroundColor3 = default and Color3.fromRGB(0, 255, 128) or Color3.fromRGB(255, 64, 64)
             Switch.BorderSizePixel = 0
-            Switch.Position = UDim2.new(1, -40, 0.5, -10)
-            Switch.Size = UDim2.new(0, 30, 0, 20)
+            Switch.Position = UDim2.new(1, -8, 0.5, 0)
+            Switch.Size = UDim2.new(0, 30, 0, 16)
             Switch.Parent = Toggle
             
             local value = default or false
@@ -335,19 +269,23 @@ function VividLibrary.new(title)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
                     value = not value
                     Switch.BackgroundColor3 = value and Color3.fromRGB(0, 255, 128) or Color3.fromRGB(255, 64, 64)
-                    if callback then
-                        callback(value)
-                    end
+                    if callback then callback(value) end
                 end
             end)
             
             return Toggle
         end
         
+        -- Select first tab by default
+        if #tabs == 0 then
+            TabButton.MouseButton1Click:Fire()
+        end
+        
+        table.insert(tabs, tab)
         return tab
     end
     
     return gui
 end
 
-return VividLibrary
+return Library
