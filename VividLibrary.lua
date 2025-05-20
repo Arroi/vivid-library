@@ -22,9 +22,10 @@ local COLORS = {
 local TWEEN_INFO = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 function Library.new(name)
-    local gui = {}
+    local window = {}
     local tabs = {}
     local activeTab = nil
+    local gui = {}
     
     -- Create ScreenGui
     local ScreenGui = Instance.new("ScreenGui")
@@ -139,7 +140,7 @@ function Library.new(name)
     Separator.Size = UDim2.new(0, 1, 1, 0)
     Separator.Parent = Window
     
-    function gui:AddTab(name)
+    function window:AddTab(name)
         local tab = {}
         
         -- Tab Button
@@ -201,7 +202,7 @@ function Library.new(name)
         
         -- Hover Effects
         TabButton.MouseEnter:Connect(function()
-            if TabButton ~= activeTab?.button then
+            if not activeTab or TabButton ~= activeTab.button then
                 TweenService:Create(TabButton, TWEEN_INFO, {
                     BackgroundTransparency = 0.8,
                     TextColor3 = COLORS.TextColor
@@ -210,7 +211,7 @@ function Library.new(name)
         end)
         
         TabButton.MouseLeave:Connect(function()
-            if TabButton ~= activeTab?.button then
+            if not activeTab or TabButton ~= activeTab.button then
                 TweenService:Create(TabButton, TWEEN_INFO, {
                     BackgroundTransparency = 1,
                     TextColor3 = COLORS.TextDimmed
@@ -285,7 +286,7 @@ function Library.new(name)
         return tab
     end
     
-    return gui
+    return window
 end
 
 return Library
